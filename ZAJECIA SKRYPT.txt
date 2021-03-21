@@ -1,0 +1,650 @@
+ZAJĘCIA 1
+
+//passy: uveerthg
+
+SQL>
+
+SQL*PLUS 	[PASSW]ORD 'ALTER USER'
+			[EDIT] - ostatnia instrukcja SQL 
+			[RUN] - wykonanie komendy w buforze
+			[/] - nie wyswietlona zawartosc same^^
+			
+SQL INSTRUCTIONS
+
+*COMMENTS
+	--
+	/* */ 
+
+CREATE TABLE
+; koniec komendy only cmd
+ 
+CREATE TABLE towary
+( IDTowaru  NUMBER(5)
+)
+
+/
+
+
+ZAJĘCIA 2
+
+CREATE TABLE towary
+(  IDTowaru NUMBER(5),	
+   nazwa VARCHAR2(50),
+   cena NUMBER(7,2))
+	
+/
+
+RUN
+
+DESC towary
+
+DESC user_tabels
+
+CREATE TABLE klienci
+(  IDKlienta NUMBER(5),	
+   firma VARCHAR2(50),
+   adres VARCHAR2(40),
+   platnikVAT CHAR(1))
+
+/
+
+INSERT INTO klienci
+VALUES(1,'Auchan', 'Lublin', 'Y')
+
+/
+
+SELECT *from klienci
+
+/
+
+INSERT INTO klienci
+(idklienta, firma)
+values(2,'Leroy')
+;
+
+ZAJĘCIA 3
+			
+@constr nazwatabeli
+
+
+
+INSERT INTO towary(nazwa,cena)
+	VALUES('cukier',10)
+
+INSERT INTO towary
+	VALUES(NULL,'cukier',10)
+
+INSERT INTO towary
+	VALUES(2,'chleb',0)
+
+SELECT
+       c1.constraint_name,
+       --- table_name,
+       c2.table_name,
+       c3.column_name,
+       c1.constraint_type,
+       c1.search_condition,
+       c1.status
+    FROM user_constraints c1, user_constraints c2, user_cons_columns c3
+WHERE c1.r_constraint_name=c2.constraint_name(+) AND c1.table_name=UPPER('&1')
+AND c1.constraint_name=c3.constraint_name(+)
+
+
+ru
+CREATE TABLE klienci
+(IDKLIENTA NUMBER(5)
+	GENERATED AS IDENTITY
+	PRIMARY KEY
+firma VARCHAR2(50) NOT NULL
+adres VARCHAR(40) NOT NULL
+platnikVAT char(1) DEFAULT 'T'
+	CHECK(platnikVAT in ('T','N'))) tu dziala
+
+INSERT INTO klienci(firma,adres)
+VALUES ('Tesco','Lublin')
+
+ZAJĘCIA 4
+
+Referencyjne więzy integralności
+
+CREATE TABLE zamowienia
+(IDZam NUMBER(5) CONSTRAINT pkzam
+PRIMARY KEY,
+data DATE)
+
+
+Z WIĘZAMI TABELOWYMI
+
+CREATE TABLE zamszcz
+(IdZam Number(5) REFERENCES
+zamowienia(IDZam),
+nrpoz NUMBER(5),
+IDTowaru NUMBER(5) REFERENCES
+towary,
+ilosc NUMBER(5),
+PRIMARY KEY(IDZam,nrpoz))
+;
+
+
+1. TYPY DANYCH MUSZĄ BYĆ ZGODNE
+2. Własność UNIC
+3. Liczba kolumn
+PK = UNIC+NOT_NULL 
+
+INSERT INTO zamszcz
+VALUES(1,1,1,1)
+;
+ORA-02291: naruszono więzy spójności 
+(WALKIEWM.SYS_C00368657) - 
+nie znaleziono klucza nadrzędnego
+
+INSERT INTO zamowienia VALUES(1,TO_DATE('2020-03-17','yyyy-mm-dd'))
+
+INSERT INTO zamszcz
+VALUES(1,1,1,1)
+;
+
+
+DELETE zamszcz ; //usuwa wiersz RODZICA
+DELETE zamowienia ; //usuwawiersz DZIECKA
+
+ROLLBACK
+; //przywracanie wierszy
+
+SELECT 
+*FROM zamszcz 
+
+UPDATE towary
+SET cena=1.5
+; //modyfikujemy wszystkie wiersze
+
+//przywrócony stan sprzed DELETE
+
+UPDATE zamszcz SET IDZam = 10
+;
+ORA-02291: naruszono więzy spójności 
+(WALKIEWM.SYS_C00368657) 
+- nie znaleziono klucza nadrzędnego
+
+UPDATE zamowienia SET IDZam = 5
+;
+ORA-02292: naruszono więzy spójności 
+(WALKIEWM.SYS_C00368657)
+ - znaleziono rekord podrzędny
+
+//wszystkie instrukcje DML
+
+ALTER TABLE("GADU GADU")
+
+ZAJĘCIA 5
+
+ALTER TABLE towary ADD(
+producent VARCHAR2(50) NOT NULL)
+; //oczekiwany błąd
+  
+ALTER TABLE towary ADD(
+producent VARCHAR2(50))
+; //oczekiwany błąd
+
+ALTER TABLE zamszcz
+MODIFY(ilosc NOT NULL)
+; narzucony warunek musi być spełniony
+  
+ALTER TABLE zamszcz
+MODIFY(ilosc NULL, IDTowaru NOT NULL)
+ ;
+  
+ALTER TABLE towary
+DROP CONSTRAINT chtowarycena 
+;			
+
+ALTER TABLE towary
+ADD(CONSTRAINT chtowarycena CHECK(cena>=0))
+;
+
+ALTER TABLE zamowienia
+DROP PRIMARY KEY //BŁĄD w linii 1:
+				   ORA-02273: obce 
+				   klucze odwołują się do tego unikatowego/głównego klucza
+
+ALTER TABLE zamowienia
+DROP PRIMARY KEY CASCADE
+
+ALTER TABLE zamowienia
+ADD(CONSTRAINT pkzam PRIMARY KEY(IdZam)) //klucz spowrotem;
+;
+
+ALTER TABLE zamowienia DROP CONSTRAINT fkzamklienci
+;
+
+ALTER TABLE zamowienia
+Modify (IDKLienta Constraint fkzamklienci REFERENCES klienci(IDKLienta)
+ON DELETE CASCADE)
+
+ALTER TABLE zamszcz
+DROP CONSTRAINTS fkzamszczzam
+
+ALTER TABLE zamszcz
+ADD(CONSTRAINT fkzamszczzam FOREIGN KEY(IDZam)
+REFERENCES zamowienia(IDZam)
+ON DELETE CASCADE)
+
+DELETE zamowienia;
+
+DROP TABLE KLIENCI CASCADE CONSTRAINT
+;
+
+ZAJĘCIA 6
+
+VAR nrzam NUMBER
+PRINT nrzam
+
+PRINT
+
+INSERT INTO zamowienia
+VALUES(DEFAULT,1,SYSDATE)
+RETURNING IDZam INTO :nrzam
+;
+
+INSERT INTO zamszcz
+VALUES(:nrzam,1,1,1000)
+;
+
+SEKWENCJE
+
+CREATE SEQUENCE s_zam
+START WITH 4
+INCREMENT BY 1
+;
+
+ALTER TABLE zamowienia
+MODIFY (IDZam DROP IDENTITY)
+;
+
+INSERT INTO zamowienia
+VALUES(s_zam.NEXTVAL, 1, SYSDATE)
+;
+
+INSERT INTO zamszcz
+VALUES(s_zam.CURRVAL,1,2,45)
+;
+
+ALTER TABLE zamowienia
+MODIFY(IDzam DEFAULT s_zam.NEXTVAL)
+;
+
+INSERT INTO zamowienia
+VALUES(DEFAULT, 2, SYSDATE)
+;
+
+***INSTRUKCJA SELECT***
+
+SELECT * FROM klienci
+;
+
+SELECT FIRMA FROM klienci
+;
+
+SELECT DISTINCT FROM klienci //lub UNIQUE
+;
+
+SELECT * FROM towary
+WHERE cena > 5
+;
+
+SELECT firma, adres FROM klienci
+WHERE adres != 'Warszawa'
+;
+
+SELECT firma, adres FROM klienci
+WHERE adres = 'Warszawa' OR adres = 'Katowice' //AND nie bo xD logika
+;
+
+SELECT firma, adres FROM klienci
+WHERE adres IN ('Warszawa', 'Katowice')
+; // to samo tylko krócej
+
+SELECT *
+FROM towary
+WHERE cena BETWEEN 10 AND 20 //pomiędzy zamknięte przedziały[]
+;
+
+SELECT * FROM KLIENCI
+WHERE platnikVAT IS NULL // pseudowartość null lub is not null
+;
+
+SELECT cena, 2*cena AS "Nowa cena"FROM towary
+; //ALIAS
+
+ZAJĘCIA 7
+
+SELECT * FROM
+towary WHERE nazwa
+LIKE 'c%'
+;
+
+SELECT * FROM
+towary WHERE 
+REGEXP_LIKE(nazwa,'cu*')
+;
+
+SELECT *
+FROM klienci
+WHERE adres = 'Warszawa'
+;
+SELECT *
+FROM klienci
+WHERE adres = CAST('Warszawa' AS VARCHAR2(20))
+
+SELECT IDKLIENTA AS Klient, IDZam AS "Numer zamowienia"
+FROM zamowienia
+;
+
+SELECT firma,
+CASE platnikVAT
+	WHEN 'T' THEN 'Platnik VAT'
+	WHEN 'N' THEN 'Bez VAT'
+	ELSE 'Nieznany'
+end AS "Status VAT"
+FROM klienci
+;
+
+SELECT firma,
+CASE 
+	WHEN platnikVAT='T' THEN 'Platnik VAT'
+	WHEN platnikVAT='N' THEN 'Bez VAT'
+	ELSE platnikVAT='Nieznany'
+end AS "Status VAT"
+FROM klienci
+;
+SELECT ABS(cena) FROM towary
+;
+
+SELECT CONCAT(firma, CONCAT(' ',adres))
+;
+SELECT firma || ' ' || adres
+;
+SELECT SUBSTR(firma,1,3)
+FROM klienci
+;
+SELECT LENGHT(firma, LENGHT(adres)
+FROM klienci
+;
+
+SELECT *
+FROM klienci
+WHERE SOUNDEX(firma)=SOUNDEX('Leklerk)
+;
+
+SELECT TO_CHAR(SYSDATE,'dd-mm-yyyy hh24:mi:ss')
+FROM zamowienia
+;
+
+SELECT NVL(platnikVAT,'-')
+FROM klienci;	
+
+SELECT MAX(cena)
+FROM towary
+;
+
+SELECT COUNT(cena) //AVG itd.
+FROM towary
+;
+
+ZAJĘCIA 8
+
+SELECT IDZam, firma, adres
+FROM zamowienia INNER JOIN klienci //LEFT RIGHT JOIN ZEWNĘTRZNE OUTER NATURAL LEFT OUTER JOIN
+	ON zamowienia.IDKLienta=klienci.IDKLienta
+	
+SELECT IDZam, firma, adres
+FROM zamowienia, klienci
+	where zamowienia.IDKLienta=klienci.IDKLienta
+
+ZAJĘCIA 9
+
+SELECT pracownicy.nazwisko AS "Pracownik",
+szefowie.nazwisko AS "JEJ/jego szef"
+FROM pracownicy INNER JOIN pracownicy szefowie //LEFT JAK TACY CO NIE MAJA NAWET
+ON pracownicy.szef = szefowie.IDPracownika
+;
+
+SELECT pracownicy.nazwisko AS "Pracownik",
+szefowie.nazwisko AS "JEJ/jego szef"
+FROM pracownicy INNER JOIN pracownicy szefowie //LEFT JAK TACY CO NIE MAJA NAWET
+ON pracownicy.szef = szefowie.IDPracownika
+INNER JOIN pracownicy nadszefowie
+ON szefowie.szef = nadszefowie.IDPracownika
+;
+
+SELECT IDKLIENTA, nazwa, ilosc
+FROM zamowienia INNER JOIN zamszcz USING(IDZam)
+INNER JOIN towary USING(IDTowaru)
+;
+
+GROUP BY 
+ZAJĘCIA 9, 10
+
+SELECT IDZam, AVG(ilosc), COUNT(*)
+FROM zamszcz
+GROUP BY IDZam
+HAVING COUNT(*) > 2
+;
+
+SELECT IDdzialu
+FROM pracownicy
+GROUP by IdDzialu
+HAVING AVG(wynagrodzenie) > 1800;
+;
+
+SELECT IDDzialu
+FROM pracownicy
+where m_urodz = 'Warszawa'
+GROUP BY IDDzialu
+HAVING AVG(wynagrodzenie) > 1800
+;
+
+SELECT IDKlienta, Max(Cena), Min(Cena)
+FROM zamowienia NATURAL JOIN zamszcz
+	NATURAL JOIN towary
+GROUP by IDKLIENTA
+HAVING SUM(ilosc*cena) > 1000
+; //fajny przykład z suma
+
+SELECT adres, COUNT(*)
+FROM klienci
+where adres in('Lublin', 'Warszawa')
+GROUP BY adres
+;
+
+6 zadan
+2 pierwsze 1 kols 1. Referencyjne wiezy i zestawienie z tabelami
+dodanie klucza obecego ALTER TABLE
+2. Podanie przykładów instrukcji 3 różne
+INSERT UPDATE DELETE - nie osierocenie wiersza w tabeli podrzednej a nadrzednej
+INSTRUKCJE DDL naruszenie więzów integralności
+
+4 to od select
+1. prosty select from where aliasy jakies w select wyrazenie w groszach
+2. złączenia 2 tabel z nawet where JOINY zewnetrzne i wewnetrzne
+3. złączenie 3 tabel i złączenie ich jakis warunek where
+4. zadanie na pogrupowanie na złączonej tabeli byc może z having
+
+RANK LIST AGG WITHIN GROUP
+
+ZAJĘCIA 11
+
+@init
+
+SELECT imie, nazwizko, IDDzialu
+FROM pracownicy
+ORDER BY IDDzialu, nazwisko
+
+SELECT imie, nazwizko, dataurodz
+FROM pracownicy
+ORDER BY dataurodz
+FETCH FIRST 5 ROWS ONLY
+
+SELECT imie, nazwizko, dataurodz
+FROM pracownicy
+ORDER BY dataurodz
+FETCH FIRST 1 ROWS WITH TIES
+
+//suma
+
+SELECT adres
+FROM klienci
+UNION //ALL
+SELECT adres
+FROM producenci
+
+//środek
+
+SELECT adres
+FROM klienci
+INTERSECT
+SELECT CAST(adres AS CHAR(40))
+FROM producenci
+
+// tu ni i tu nie
+SELECT adres
+FROM klienci
+MINUS
+SELECT CAST(adres AS CHAR(40))
+FROM producenci
+
+PODZAPYTANIA SKALARNE
+
+SELECT *
+FROM zamowienia
+WHERE data >
+( SELECT data 
+FROM zamowienia 
+WHERE IDZam = 3 )
+
+SELECT imie, nazwisko, wynagrodzenie
+FROM pracownicy
+WHERE wynagrodzenie > 
+(SELECT AVG(wynagrodzenie)
+FROM pracownicy)
+
+NIESKALARNE
+
+SELECT firma
+FROM klienci
+WHERE IDKLIENTA IN (SELECT IDKLIENTA //ZNAJDUJE SIE NA LISCIE 1 kolumna dowolna liczba wirszy
+FROM zamowienia
+WHERE IDPracownika=1)
+
+SKORELOWANE
+
+SELECT imie, nazwisko, wynagrodzenie
+FROM pracownicy p
+WHERE wynagrodzenie > 
+(SELECT AVG(wynagrodzenie)
+FROM pracownicy
+WHERE IDDzialu=p.IDdzialu)
+
+ZAJECIA 12
+
+SELECT * from pracownicy pr
+where Iddzialu in(
+SELECT IDdzialu from pracownicy 
+where IDPracownika <> pr.IDPracownika)
+
+SELECT * from pracownicy pr
+where EXISTS(
+SELECT IDdzialu from pracownicy 
+where IDPracownika <> pr.IDPracownika AND
+IDdzialu = pr.IDdzialu)
+
+//dom
+SELECT * FROM pracownicy
+WHERE IDdzialu IN(
+SELECT IDDZIALU 
+FROM pracownicy
+WHERE IDPracownika IS NOT NULL)
+//
+
+SELECT * from pracownicy pr
+where NOT EXISTS(
+SELECT IDPracownika from pracownicy 
+where IDdzialu = pr.IDDzialu AND
+wynagrodzenie = pr.wynagrodzenie)
+
+
+SELECT *FROM towary
+WHERE cena > ALL //SOME
+(Select cena
+FROM zamszcz = INNER JOIN towary USING(IDTowaru)
+Where IDzam=7)
+
+SELECT *FROM towary
+WHERE cena >
+(Select Max(cena) //to lepsze bo nulle ign
+FROM zamszcz = INNER JOIN towary USING(IDTowaru)
+Where IDzam=7)
+
+W HAVING:
+
+SELECT IDTowaru, Max(ilosc)
+FROM zamszcz
+GROUP BY TDTowaru
+HAVING COUNT(*) >
+(
+SELECT COUNT (*)
+FROM zamszcz
+WHERE ID Towaru = 1)
+
+WE FRAZIE FROM:
+
+SELECT MAX(srwyn)
+FROM (Select AVG(wynagrodzenie) srwyn
+FROM pracownicy GROUP BY Iddzialu)
+
+JOINY:
+
+SELECT imie, nazwisko, wynagrodzenie, srwyn FROM pracownicy INNER join
+(Select Iddzialu, AVG(wynagrodzenie) srwyn
+FROM pracownicy
+GROUP BY Iddzialu) USING (Iddzialu)
+
+SELECT W SELECT:
+
+SELECT imie, nazwisko, wynagrodzenie, (SELECT AVG(wynagrodzenie)
+FROM pracownicy 
+WHERE Iddzialu = pr.Iddzialu) srwyn
+FROM pracownicy pr
+
+UPDATE pracownicy
+SET wynagrodzenie = (SELECT AVG(wynagrodznie) FROM pracownicy)
+
+UPDATE pracownicy pr
+SET wynagrodzenie = (SELECT AVG(wynagrodzenie) 
+		FROM pracownicy
+		WHERE IDdzialu = pr.IDdzialu)
+
+ZAJECIA 14
+
+CREATE OR REPLACE VIEW vkierownicy(dzial,kierownik) AS
+SELECT nazwa, imie || ' ' || nazwisko
+FROM dzialy INNER JOIN pracownicy ON kierwonik = IDPracownika
+
+SELECT *FROM vkierownicy
+
+//f agregujace
+SELECT IDTowaru, MIN(cena) OVER() AS mincena, cena, MAX(cena) OVER() AS maxcena
+FROM towary
+
+SELECT nazwa, cena, MAX(cena) OVER(Partition BY IdProducenta) maxcena, 
+COUNT(*) OVER(Partition by cena) ile //ROW_Number() Rank()
+FROM towary
+
+SELECT nazwisko, wynagrodzenie, AVG(wynagrodzenie) OVER(Partition by IDdzialu) sr, 
+AVG(wynagrodzenie) OVER(Partition by IDdzialu Order by dataurodz) srup
+FROM pracownicy)
+//FIRST_VALUE(wynagrodzenie) 1 najw z grupy
+//LEAD o oczko mniej kolejnego w uprządkowaniu
+
+SELECT nazwisko, wynagrodzenie, COUNT(*) OVER (ORDER BY wynagrodzenie RANGE BETWEEN 100 PRECEDING AND 100 FOLLOWING) ilu
+FROM pracownicyspś
